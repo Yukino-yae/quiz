@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, viewport-fit=cover"
+    />
+    <meta name="theme-color" content="#f5f6f8" />
+    <meta
+      name="description"
+      content="本地优先的刷题题库：Excel 导入、章节练习、错题本、模拟考试与学习统计。"
+    />
+    <title>刷题 · 本地题库</title>
+    <script>
+      ;(() => {
+        try {
+          const stored = JSON.parse(localStorage.getItem('quiz-settings') || '{}')
+          const mode = stored?.state?.theme || 'system'
+          const dark =
+            mode === 'dark' ||
+            (mode === 'system' &&
+              window.matchMedia('(prefers-color-scheme: dark)').matches)
+          document.documentElement.classList.toggle('dark', dark)
+          document.documentElement.style.colorScheme = dark ? 'dark' : 'light'
+          document
+            .querySelector('meta[name="theme-color"]')
+            ?.setAttribute('content', dark ? '#0c0f16' : '#f5f6f8')
+        } catch {
+          /* ignore */
+        }
+      })()
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

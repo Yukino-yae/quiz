@@ -1,0 +1,134 @@
+@import "tailwindcss";
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+@theme inline {
+  --font-sans:
+    ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto,
+    "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Noto Sans SC",
+    sans-serif;
+  --font-mono:
+    ui-monospace, "SFMono-Regular", "Cascadia Code", Consolas, monospace;
+
+  --color-bg: var(--app-bg);
+  --color-surface: var(--app-surface);
+  --color-surface-2: var(--app-surface-2);
+  --color-border: var(--app-border);
+  --color-border-strong: var(--app-border-strong);
+  --color-fg: var(--app-fg);
+  --color-muted: var(--app-muted);
+  --color-primary: var(--app-primary);
+  --color-primary-fg: var(--app-primary-fg);
+  --color-primary-soft: var(--app-primary-soft);
+  --color-success: var(--app-success);
+  --color-success-soft: var(--app-success-soft);
+  --color-danger: var(--app-danger);
+  --color-danger-soft: var(--app-danger-soft);
+  --color-warning: var(--app-warning);
+  --color-warning-soft: var(--app-warning-soft);
+
+  --shadow-card:
+    0 1px 2px rgb(16 24 40 / 0.04), 0 8px 24px -12px rgb(16 24 40 / 0.12);
+  --shadow-float: 0 24px 64px -24px rgb(16 24 40 / 0.35);
+}
+
+:root {
+  --app-bg: #f5f6f8;
+  --app-surface: #ffffff;
+  --app-surface-2: #eef0f4;
+  --app-border: #e4e7ec;
+  --app-border-strong: #cfd5df;
+  --app-fg: #101828;
+  --app-muted: #667085;
+  --app-primary: #4f46e5;
+  --app-primary-fg: #ffffff;
+  --app-primary-soft: #eef0ff;
+  --app-success: #067647;
+  --app-success-soft: #e8f7ef;
+  --app-danger: #b42318;
+  --app-danger-soft: #fdecea;
+  --app-warning: #b54708;
+  --app-warning-soft: #fef4e6;
+
+  color-scheme: light;
+}
+
+.dark {
+  --app-bg: #0c0f16;
+  --app-surface: #141923;
+  --app-surface-2: #1c222e;
+  --app-border: #262e3d;
+  --app-border-strong: #3a4457;
+  --app-fg: #e9edf4;
+  --app-muted: #95a0b3;
+  --app-primary: #818cf8;
+  --app-primary-fg: #0b0e14;
+  --app-primary-soft: #1e2440;
+  --app-success: #4ade80;
+  --app-success-soft: #12271d;
+  --app-danger: #f97066;
+  --app-danger-soft: #2a1517;
+  --app-warning: #fbbf24;
+  --app-warning-soft: #2a2110;
+
+  color-scheme: dark;
+}
+
+@layer base {
+  html {
+    -webkit-text-size-adjust: 100%;
+    scrollbar-gutter: stable;
+  }
+
+  body {
+    margin: 0;
+    min-height: 100vh;
+    background: var(--app-bg);
+    color: var(--app-fg);
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+  }
+
+  button,
+  input,
+  textarea,
+  select {
+    font: inherit;
+  }
+
+  input,
+  textarea {
+    font-size: 16px;
+  }
+
+  ::selection {
+    background: color-mix(in srgb, var(--app-primary) 26%, transparent);
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--app-primary);
+    outline-offset: 2px;
+  }
+
+  dialog::backdrop {
+    background: rgb(8 12 20 / 0.45);
+    backdrop-filter: blur(2px);
+  }
+}
+
+@utility pb-safe {
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
