@@ -3,6 +3,7 @@ import {
   AlertCircle,
   ArrowLeft,
   BookOpen,
+  Download,
   Loader2,
   Play,
 } from 'lucide-react'
@@ -14,6 +15,7 @@ import { buttonStyles } from '@/components/ui/buttonStyles'
 import { Card } from '@/components/ui/Card'
 import { db } from '@/db/db'
 import { toggleQuestionFavorite } from '@/db/questionStateRepository'
+import { exportBackup } from '@/features/backup/backupService'
 import {
   advanceSession,
   completeSession,
@@ -74,6 +76,8 @@ export default function PracticePage() {
   )
 
   const [skipping, setSkipping] = useState(false)
+  const [exporting, setExporting] = useState(false)
+  const [exportNotice, setExportNotice] = useState('')
 
   if (data === undefined || (data && answers === undefined)) {
     return <LoadingPractice />
@@ -175,6 +179,21 @@ export default function PracticePage() {
     await toggleQuestionFavorite(currentQuestion)
   }
 
+  async function handleExportBackup() {
+    if (exporting) return
+    setExporting(true)
+    setExportNotice('')
+    try {
+      const fileName = await exportBackup()
+      setExportNotice(`备份已导出：${fileName}`)
+    } catch (err) {
+      setExportNotice(err instanceof Error ? err.message : '导出失败，请重试')
+    } finally {
+      setExporting(false)
+      window.setTimeout(() => setExportNotice(''), 4000)
+    }
+  }
+
   return (
     <PracticeShell>
       <header className="sticky top-0 z-30 border-b border-border bg-bg/90 backdrop-blur-xl">
@@ -196,6 +215,20 @@ export default function PracticePage() {
               第 {index + 1} / {total} 题
             </p>
           </div>
+          <button
+            type="button"
+            onClick={handleExportBackup}
+            disabled={exporting}
+            aria-label="导出备份"
+            title="导出 JSON 备份（包含点击前的全部数据）"
+            className="inline-flex size-9 shrink-0 items-center justify-center rounded-lg text-muted transition-colors hover:bg-surface-2 hover:text-fg disabled:opacity-50"
+          >
+            {exporting ? (
+              <Loader2 className="size-4 animate-spin" />
+            ) : (
+              <Download className="size-4" />
+            )}
+          </button>
           <span className="min-w-10 shrink-0 text-right text-xs tabular-nums text-muted">
             {Math.round(progress)}%
           </span>
@@ -256,6 +289,15 @@ export default function PracticePage() {
           />
         )}
       </main>
+
+      {exportNotice && (
+        <div
+          role="status"
+          className="fixed inset-x-4 bottom-24 z-50 mx-auto w-fit max-w-full rounded-xl border border-border bg-surface px-4 py-2.5 text-center text-xs leading-5 text-fg shadow-card"
+        >
+          {exportNotice}
+        </div>
+      )}
     </PracticeShell>
   )
 }

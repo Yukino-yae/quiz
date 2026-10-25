@@ -1,7 +1,9 @@
+import dayjs from 'dayjs'
 import { useLiveQuery } from 'dexie-react-hooks'
 import {
   AlertTriangle,
   Check,
+  Clock,
   Database,
   Download,
   Loader2,
@@ -9,6 +11,7 @@ import {
   Moon,
   ShieldCheck,
   Sun,
+  Timer,
   Trash2,
   Upload,
 } from 'lucide-react'
@@ -29,7 +32,9 @@ import {
 } from '@/features/backup/backupService'
 import { cn } from '@/lib/cn'
 import {
+  AUTO_BACKUP_INTERVALS,
   useSettingsStore,
+  type AutoBackupIntervalMin,
   type ThemeMode,
 } from '@/stores/settingsStore'
 
@@ -70,6 +75,37 @@ function SettingRow({
   )
 }
 
+function Toggle({
+  checked,
+  onChange,
+  label,
+}: {
+  checked: boolean
+  onChange: (checked: boolean) => void
+  label: string
+}) {
+  return (
+    <button
+      type="button"
+      role="switch"
+      aria-checked={checked}
+      aria-label={label}
+      onClick={() => onChange(!checked)}
+      className={cn(
+        'relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors',
+        checked ? 'bg-primary' : 'bg-surface-2 ring-1 ring-inset ring-border',
+      )}
+    >
+      <span
+        className={cn(
+          'inline-block size-5 rounded-full bg-white shadow-sm transition-transform',
+          checked ? 'translate-x-[22px]' : 'translate-x-0.5',
+        )}
+      />
+    </button>
+  )
+}
+
 function Feedback({
   tone,
   children,
@@ -100,6 +136,21 @@ function Feedback({
 export default function SettingsPage() {
   const theme = useSettingsStore((state) => state.theme)
   const setTheme = useSettingsStore((state) => state.setTheme)
+  const autoBackupEnabled = useSettingsStore(
+    (state) => state.autoBackupEnabled,
+  )
+  const autoBackupIntervalMin = useSettingsStore(
+    (state) => state.autoBackupIntervalMin,
+  )
+  const lastAutoBackupAt = useSettingsStore(
+    (state) => state.lastAutoBackupAt,
+  )
+  const setAutoBackupEnabled = useSettingsStore(
+    (state) => state.setAutoBackupEnabled,
+  )
+  const setAutoBackupIntervalMin = useSettingsStore(
+    (state) => state.setAutoBackupIntervalMin,
+  )
   const counts = useLiveQuery(async () => {
     const [banks, questions] = await Promise.all([
       db.banks.count(),
@@ -243,7 +294,7 @@ export default function SettingsPage() {
           <SettingRow
             icon={Download}
             title="导出备份"
-            description="把题库、练习记录和设置导出为一个 JSON 文件。"
+            description="立即导出点击时刻之前的全部题库、练习记录和设置。"
             action={
               <Button
                 variant="secondary"
@@ -441,6 +492,71 @@ export default function SettingsPage() {
             </div>
           </div>
         )}
+      </Card>
+
+      <Card className="p-5 sm:p-6">
+        <div>
+          <h2 className="text-[15px] font-semibold">自动备份</h2>
+          <p className="mt-1 text-[13px] leading-6 text-muted">
+            页面打开期间定时把全部数据导出为 JSON 文件。关闭页面或切换标签页后暂停，
+            回到页面时如果已经超过间隔会立即补一份。
+          </p>
+        </div>
+
+        <div className="mt-2 divide-y divide-border">
+          <SettingRow
+            icon={Timer}
+            title="定时自动备份"
+            description={
+              autoBackupEnabled
+                ? `每 ${autoBackupIntervalMin} 分钟自动下载一份备份。`
+                : '已关闭，不会自动下载备份文件。'
+            }
+            action={
+              <Toggle
+                checked={autoBackupEnabled}
+                onChange={setAutoBackupEnabled}
+                label="定时自动备份"
+              />
+            }
+          />
+          <SettingRow
+            icon={Clock}
+            title="备份间隔"
+            description="间隔越短越安全，但下载文件夹里会积累更多文件。"
+            action={
+              <select
+                value={autoBackupIntervalMin}
+                onChange={(event) =>
+                  setAutoBackupIntervalMin(
+                    Number(event.target.value) as AutoBackupIntervalMin,
+                  )
+                }
+                disabled={!autoBackupEnabled}
+                aria-label="自动备份间隔"
+                className="h-9 rounded-lg border border-border bg-surface px-2.5 text-[13px] text-fg outline-none transition-colors focus:border-primary disabled:opacity-50"
+              >
+                {AUTO_BACKUP_INTERVALS.map((minutes) => (
+                  <option key={minutes} value={minutes}>
+                    每 {minutes} 分钟
+                  </option>
+                ))}
+              </select>
+            }
+          />
+        </div>
+
+        <div className="mt-3 flex flex-col gap-2 border-t border-border pt-4 text-[12px] leading-5 text-muted sm:flex-row sm:items-center sm:justify-between">
+          <span>
+            {lastAutoBackupAt
+              ? `上次自动备份：${dayjs(lastAutoBackupAt).format('M月D日 HH:mm:ss')}`
+              : '本次打开页面后还没有自动备份。'}
+          </span>
+          <span className="inline-flex items-start gap-1.5 text-warning">
+            <AlertTriangle className="mt-0.5 size-3.5 shrink-0" />
+            浏览器可能询问是否允许下载多个文件，请选择允许，否则之后的自动备份会被拦截。
+          </span>
+        </div>
       </Card>
 
       <Card className="p-5 sm:p-6">

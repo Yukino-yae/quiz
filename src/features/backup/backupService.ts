@@ -1,6 +1,10 @@
 import { z } from 'zod'
 import { db } from '@/db/db'
 import { downloadBlob } from '@/lib/download'
+import {
+  backupFileName,
+  type BackupSource,
+} from '@/features/backup/backupFileName'
 import type {
   AnswerRecord,
   AppSetting,
@@ -135,13 +139,6 @@ export interface RestoreResult extends BackupSummary {
   addedQuestions: number
 }
 
-function todayStamp(): string {
-  const now = new Date()
-  const month = String(now.getMonth() + 1).padStart(2, '0')
-  const day = String(now.getDate()).padStart(2, '0')
-  return `${now.getFullYear()}-${month}-${day}`
-}
-
 export async function createBackup(): Promise<Blob> {
   const [banks, questions, questionStates, sessions, answers, settings] =
     await Promise.all([
@@ -172,9 +169,15 @@ export async function createBackup(): Promise<Blob> {
   })
 }
 
-export async function exportBackup(): Promise<string> {
+/**
+ * Snapshot everything up to now and download it. The payload is read at call
+ * time, so a manual export includes every record written before the click.
+ */
+export async function exportBackup(
+  source: BackupSource = 'manual',
+): Promise<string> {
   const blob = await createBackup()
-  const fileName = `刷题题库备份-${todayStamp()}.json`
+  const fileName = backupFileName(source)
   downloadBlob(blob, fileName)
   return fileName
 }

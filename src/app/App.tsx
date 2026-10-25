@@ -1,6 +1,7 @@
 import { lazy, Suspense, type ReactNode } from 'react'
 import { BrowserRouter, Route, Routes } from 'react-router-dom'
 import { AppLayout } from '@/app/AppLayout'
+import { useAutoBackup } from '@/hooks/useAutoBackup'
 import { useThemeSync } from '@/hooks/useThemeSync'
 import BankDetailPage from '@/pages/BankDetailPage'
 import BanksPage from '@/pages/BanksPage'
@@ -29,11 +30,16 @@ function LazyPage({ children }: { children: ReactNode }) {
   return <Suspense fallback={<PageFallback />}>{children}</Suspense>
 }
 
+// Vite's base is "/quiz/" on GitHub Pages project sites and "/" locally.
+const routerBasename =
+  import.meta.env.BASE_URL.replace(/\/$/, '') || undefined
+
 export default function App() {
   useThemeSync()
+  useAutoBackup()
 
   return (
-    <BrowserRouter>
+    <BrowserRouter basename={routerBasename}>
       <Routes>
         <Route path="practice/:sessionId" element={<PracticePage />} />
         <Route element={<AppLayout />}>

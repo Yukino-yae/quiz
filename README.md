@@ -13,16 +13,46 @@
 - Vitest（解析器单元测试）
 - Playwright Core（UI 冒烟测试）
 
-## 本地运行
+## 启动方式
+
+### 环境要求
+
+- Node.js（建议 20 及以上）与 npm
+- 现代浏览器（Chrome / Edge / Firefox / Safari）；数据保存在浏览器 IndexedDB 中
+
+### 开发模式（日常使用）
+
+在项目根目录执行：
 
 ```bash
-npm install
-npm run dev
+npm install     # 首次克隆或依赖缺失时执行一次
+npm run dev     # 启动 Vite 开发服务器
 ```
 
-打开 http://localhost:5173。
+然后在浏览器打开 <http://localhost:5173>。开发服务器支持热更新，修改代码后页面会自动刷新，按 `Ctrl+C` 停止。
 
-手机访问：在同一局域网内，用电脑的局域网 IP 访问开发服务器（例如 `http://192.168.1.10:5173`）。正式使用和 PWA 安装建议部署到静态托管平台。
+如果依赖已经安装过（存在 `node_modules` 目录），可以跳过 `npm install` 直接运行 `npm run dev`。
+
+### 生产构建与本地预览
+
+```bash
+npm run build    # tsc -b 类型检查 + vite build，产物输出到 dist/
+npm run preview  # 以 HTTP 服务预览 dist/ 中的构建结果
+```
+
+> 不能直接双击 `dist/index.html` 打开——这是单页应用，路由和静态资源需要 HTTP 服务，本地查看请用 `npm run preview`，正式使用则把 `dist/` 部署到任意静态托管平台。
+
+### 手机访问
+
+手机和电脑连接同一个 Wi-Fi，用电脑的局域网 IP 访问开发服务器，例如 `http://192.168.1.10:5173`。
+
+开发服务器默认只监听本机，手机访问不到时用 `--host` 暴露到局域网：
+
+```bash
+npm run dev -- --host
+```
+
+正式使用和 PWA 安装建议部署到静态托管平台。
 
 ## 常用命令
 
@@ -162,11 +192,49 @@ Word（`.docx`）会优先读取文档中的表格；表格表头与上面的表
 
 设置页提供：
 
-- 导出 JSON 备份（包含题库、题目、题目状态、练习记录和设置）
+- 导出 JSON 备份（包含题库、题目、题目状态、练习记录和设置），点击时读取当时的数据
+- 自动备份：页面打开期间按设置的间隔（5 / 10 / 15 / 30 / 60 分钟）自动下载一份带时间戳的 JSON
+  - 默认开启，间隔 10 分钟；可在设置页随时关闭或调整
+  - 标签页隐藏时暂停，回到页面后如果已超过间隔会立即补一份
+  - 自动备份只在页面打开时运行，关闭页面后停止
+  - 浏览器首次连续下载多个文件时可能询问是否允许，需要选择允许，否则后续自动备份会被拦截
+- 练习页顶部也有一个导出按钮，做题过程中可以随时手动导出点击前的全部数据
 - 导入备份：合并导入（相同 ID 以备份为准）或覆盖恢复（先清空当前数据）
 - 清空本机全部数据
 
 数据只保存在当前浏览器中，清理浏览器数据、使用无痕模式或更换设备都会导致数据丢失，建议定期导出备份。
+
+## 部署到 GitHub Pages
+
+仓库 `Yukino-yae/quiz` 对应的访问地址是 <https://yukino-yae.github.io/quiz/>。项目已包含 `.github/workflows/deploy.yml`，推送到 `main` 后会自动构建并发布。
+
+首次部署：
+
+1. 打开 GitHub 仓库的 **Settings → Pages**；
+2. 在 **Build and deployment → Source** 中选择 **GitHub Actions**；
+3. 推送到 `main`，或在 **Actions → Deploy to GitHub Pages → Run workflow** 手动触发；
+4. 等待 `build` 和 `deploy` 两个 job 完成，打开上面的地址。
+
+工作流会：
+
+- 执行 `npm ci` 和 `npm run build:pages`；
+- `build:pages` 使用 Vite 的 `pages` 模式，把资源路径前缀设为 `/quiz/`；
+- 把 `dist/index.html` 复制为 `dist/404.html`，让 `/quiz/practice/...` 这类深链接在 GitHub Pages 上仍能由前端路由接管；
+- 上传 `dist/` 到 GitHub Pages。
+
+本地验证 Pages 构建：
+
+```bash
+npm run build:pages
+npm run preview -- --mode pages
+# 打开 http://localhost:4173/quiz/
+```
+
+注意事项：
+
+- 仓库名配置在 `vite.config.ts` 的 `PAGES_REPO_NAME`。如果仓库改名，或部署到用户主页仓库（`<用户名>.github.io`），需要相应修改；用户主页应使用 `/`。
+- 浏览器数据按源（协议 + 域名 + 端口）隔离。从 `localhost` 切换到 `https://yukino-yae.github.io` 后看不到旧数据，请先在设置页导出 JSON 备份，再在新地址导入。
+- 首次连续自动下载多个备份文件时，浏览器可能要求允许下载多个文件；在 Pages 域名下同样需要允许。
 
 ## 目录结构
 
