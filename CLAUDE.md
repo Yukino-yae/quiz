@@ -8,16 +8,20 @@ Local-first Chinese quiz-practice SPA. There is no backend, login, or cloud sync
 
 Stack: React 19 + TypeScript + Vite + Tailwind CSS v4, React Router 7, Dexie 4 + `dexie-react-hooks`, Zustand, Zod.
 
+The app is deployed to GitHub Pages as a project site at `https://yukino-yae.github.io/quiz/`; the Pages build serves under `/quiz/`.
+
 ## Commands
 
 ```bash
 npm install
-npm run dev        # Vite dev server, default http://localhost:5173
-npm run build      # tsc -b + vite build (also the type-check)
-npm run lint       # oxlint
-npm test           # Vitest unit tests
-npm run verify:ui  # Playwright Core smoke tests; requires the dev server
-npm run preview    # preview a production build
+npm run dev          # Vite dev server, default http://localhost:5173
+npm run build        # tsc -b + vite build (also the type-check)
+npm run build:pages  # GitHub Pages build: base /quiz/ + dist/404.html
+npm run lint         # oxlint
+npm test             # Vitest unit tests
+npm run verify:ui    # Playwright Core smoke tests; requires the dev server
+npm run preview      # preview a production build
+npm run preview -- --mode pages  # preview the Pages build at http://localhost:4173/quiz/
 ```
 
 Run one Vitest file:
@@ -33,6 +37,8 @@ npx vitest run src/features/practice/__tests__/grading.test.ts
 ### App shell and routes
 
 `src/app/App.tsx` defines all routes. The practice route `/practice/:sessionId` deliberately sits outside `AppLayout` for an immersive full-screen view. Import and Settings are route-lazy-loaded. The mobile bottom nav and desktop sidebar come from `src/app/nav.ts`.
+
+`App` also mounts `useAutoBackup()` for every route (including practice) and builds `BrowserRouter` with a basename derived from `import.meta.env.BASE_URL`, so one build works at `/` locally and `/quiz/` on GitHub Pages.
 
 Placeholder pages: `ExamPage` (stage 5 mock exams) and most of `StatsPage` (stage 6). Stages 1-4 are implemented; stage 7 is PWA/offline work.
 
@@ -72,15 +78,27 @@ All formats converge on `RawQuestion` → `normalizeQuestion` → `DraftQuestion
 - Deduplication is computed during preview by `questionKey` (type + stem), both within the file and against the target bank.
 - `importService.ts` appends questions with fresh IDs and monotonically increasing `order`.
 
-### Backup compatibility
+### Backup and auto backup
 
 `src/features/backup/backupService.ts` mirrors the data types with Zod schemas and supports merge/replace restore. Any change to `Question`, `QuestionState`, `Session`, or `AnswerRecord` must be reflected there (use `.default(...)` for new optional fields when reading older backups).
+
+`createBackup` reads all six tables at call time, so manual exports (Settings page and the practice header button) contain every record written before the click. `exportBackup(source)` downloads the snapshot; filenames come from `backupFileName.ts` with second-level local timestamps (`刷题题库备份-...` for manual, `刷题题库自动备份-...` for automatic).
+
+`src/hooks/useAutoBackup.ts` is mounted once in `App`. While auto backup is enabled (`autoBackupEnabled`, default true) and the tab is visible, it exports a backup every `autoBackupIntervalMin` minutes (default 10) as long as the database has data. It skips hidden tabs, catches up on `visibilitychange`, records `lastAutoBackupAt`, and guards against overlapping runs. These settings persist in the `quiz-settings` Zustand store. Browsers may block repeated automatic downloads, so the UI warns users to allow multiple downloads.
+
+### GitHub Pages deployment
+
+`npm run build:pages` builds with Vite's `pages` mode; `vite.config.ts` sets `base` to `/<PAGES_REPO_NAME>/` (currently `/quiz/`). Pass the same mode when previewing: `npm run preview -- --mode pages`. `.github/workflows/deploy.yml` deploys on pushes to `main` (and manual dispatch): `npm ci` → `npm run build:pages` → upload `dist/` → `actions/deploy-pages`.
+
+`scripts/copy-404.mjs` copies `dist/index.html` to `dist/404.html`; GitHub Pages serves that file for unknown deep links such as `/quiz/practice/:id`, and the Router basename lets the SPA take over (the HTTP status stays 404, which is expected). `public/.nojekyll` is emitted with the build.
+
+Repository Pages settings must use **GitHub Actions** as the source (not a branch), which is already configured. Renaming the repository or deploying to a `<user>.github.io` user site requires updating `PAGES_REPO_NAME` in `vite.config.ts` (a user site uses `/`). IndexedDB is origin-scoped, so data does not move between `localhost` and the Pages domain; use JSON backup/restore.
 
 ### UI and theming
 
 Tailwind v4 design tokens are defined in `src/index.css` (`bg-bg`, `bg-surface`, `bg-surface-2`, `border-border`, `text-fg`, `text-muted`, `bg-primary`, `bg-primary-soft`, `bg-success-soft`, `bg-danger-soft`, `bg-warning-soft`, `shadow-card`, etc.). Reuse these semantic classes instead of hard-coded colors so light/dark themes keep working. Dark mode is class-based (`.dark` with a `@custom-variant`).
 
-Reusable primitives are under `src/components/ui/` (`Button`, `Card`, `Badge`, `buttonStyles`). Use `pb-safe` for bottom-fixed mobile UI. Theme choice is persisted by the Zustand store (`quiz-settings`) and applied by `useThemeSync`.
+Reusable primitives are under `src/components/ui/` (`Button`, `Card`, `Badge`, `buttonStyles`). Use `pb-safe` for bottom-fixed mobile UI. Theme and auto-backup settings are persisted by the Zustand store (`quiz-settings`); `useThemeSync` applies the theme.
 
 When adding new practice modes, update `types/quiz.ts`, labels, setup/bank-detail entry points, `sessionRepository`, and the backup Zod enum.
 
